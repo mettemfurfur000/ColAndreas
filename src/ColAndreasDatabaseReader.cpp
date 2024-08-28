@@ -1,9 +1,11 @@
-#include "ColAndreasDatabaseReader.h"
-#include "ColAndreas.h"
+#include "include/ColAndreasDatabaseReader.h"
+#include "include/ColAndreas.h"
+
+#define DATABASE_VERSION 2
 
 std::map<uint16_t, CollisionModelstructure> CollisionModels;
-ItemPlacementstructure* ModelPlacements;
-std::vector<ItemPlacementstructure*> RemovedGameObjects;
+ItemPlacementstructure *ModelPlacements;
+std::vector<ItemPlacementstructure *> RemovedGameObjects;
 uint16_t ModelCount = 0;
 uint32_t IPLCount = 0;
 std::map<int32_t, uint16_t> ModelRef;
@@ -18,17 +20,18 @@ bool ReadColandreasDatabaseFile(std::string FileLocation)
 {
 	bool returnValue = false;
 
-	ifstream ColAndreasBinaryfile;
+	std::ifstream ColAndreasBinaryfile;
 
-	ColAndreasBinaryfile.open(FileLocation, ios::in | ios::binary);
+	ColAndreasBinaryfile.open(FileLocation, std::ios::in | std::ios::binary);
 
-	if (ColAndreasBinaryfile.is_open()) {
+	if (ColAndreasBinaryfile.is_open())
+	{
 		ColAndreasBinaryfile.seekg(0, ColAndreasBinaryfile.end);
 		int length = static_cast<int>(ColAndreasBinaryfile.tellg());
 
 		ColAndreasBinaryfile.seekg(0, ColAndreasBinaryfile.beg);
 
-		char * buffer = new char[length];
+		char *buffer = new char[length];
 
 		ColAndreasBinaryfile.read(buffer, length);
 
@@ -36,38 +39,44 @@ bool ReadColandreasDatabaseFile(std::string FileLocation)
 
 		char FileExtension[4];
 		GetBytes(buffer, FileExtension, FileIndex, 4);
-		
-		//If is a ColAndreas binary file.
+
+		// If is a ColAndreas binary file.
 		if (!strncmp(FileExtension, "cadf", 4))
 		{
-			uint16_t fileVersion;			
+			uint16_t fileVersion;
 			GetBytes(buffer, fileVersion, FileIndex, 2);
-			
-			if(fileVersion == CA_DATABASE_VERSION)
+
+			if (fileVersion == DATABASE_VERSION)
 			{
 				GetBytes(buffer, ModelCount, FileIndex, 2);
 				GetBytes(buffer, IPLCount, FileIndex, 4);
 
-				if (ModelCount > 0) {
+				if (ModelCount > 0)
+				{
 
-					for (uint16_t i = 0; i < ModelCount; i++) {
+					for (uint16_t i = 0; i < ModelCount; i++)
+					{
 						GetBytes(buffer, CollisionModels[i].Modelid, FileIndex, 2);
 						GetBytes(buffer, CollisionModels[i].SphereCount, FileIndex, 2);
 						GetBytes(buffer, CollisionModels[i].BoxCount, FileIndex, 2);
 						GetBytes(buffer, CollisionModels[i].FaceCount, FileIndex, 2);
 
-						if (CollisionModels[i].SphereCount > 0) {
+						if (CollisionModels[i].SphereCount > 0)
+						{
 							CollisionModels[i].SphereData = new structSphereData[CollisionModels[i].SphereCount];
 
-							for (uint16_t j = 0; j < CollisionModels[i].SphereCount; j++) {
+							for (uint16_t j = 0; j < CollisionModels[i].SphereCount; j++)
+							{
 								GetBytes(buffer, CollisionModels[i].SphereData[j], FileIndex, sizeof(structSphereData));
 							}
 						}
 
-						if (CollisionModels[i].BoxCount > 0) {
+						if (CollisionModels[i].BoxCount > 0)
+						{
 							CollisionModels[i].BoxData = new structBoxData[CollisionModels[i].BoxCount];
 
-							for (uint16_t j = 0; j < CollisionModels[i].BoxCount; j++) {
+							for (uint16_t j = 0; j < CollisionModels[i].BoxCount; j++)
+							{
 								GetBytes(buffer, CollisionModels[i].BoxData[j], FileIndex, sizeof(structBoxData));
 							}
 						}
@@ -76,17 +85,20 @@ bool ReadColandreasDatabaseFile(std::string FileLocation)
 						{
 							CollisionModels[i].FacesData = new structFacesData[CollisionModels[i].FaceCount];
 
-							for (uint16_t j = 0; j < CollisionModels[i].FaceCount; j++) {
+							for (uint16_t j = 0; j < CollisionModels[i].FaceCount; j++)
+							{
 								GetBytes(buffer, CollisionModels[i].FacesData[j], FileIndex, sizeof(structFacesData));
 							}
 						}
 					}
 				}
-				
-				if (IPLCount > 0) {
+
+				if (IPLCount > 0)
+				{
 					ModelPlacements = new ItemPlacementstructure[IPLCount];
 
-					for (uint32_t i = 0; i < IPLCount; i++) {
+					for (uint32_t i = 0; i < IPLCount; i++)
+					{
 						GetBytes(buffer, ModelPlacements[i].Modelid, FileIndex, sizeof(uint16_t));
 						GetBytes(buffer, ModelPlacements[i].Position, FileIndex, sizeof(Vector));
 						GetBytes(buffer, ModelPlacements[i].Rotation, FileIndex, sizeof(Quaternion));
@@ -114,12 +126,12 @@ bool ReadColandreasDatabaseFile(std::string FileLocation)
 			}
 			else
 			{
-				logprintf("ERROR: Incompatible database file, expecting version 0x%04X, but found 0x%04X.", CA_DATABASE_VERSION, fileVersion);
+				// logprintf("ERROR: Incompatible database file, expecting version 0x%04X, but found 0x%04X.", DATABASE_VERSION, fileVersion);
 				returnValue = false;
 			}
 		}
-		
-		delete [] buffer;
+
+		delete[] buffer;
 	}
 	ColAndreasBinaryfile.close();
 	return returnValue;

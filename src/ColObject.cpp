@@ -1,13 +1,14 @@
-#include "ColObject.h"
-#include "WaterArray.h"
-#include "DynamicWorld.h"
-#include "ColAndreasDatabaseReader.h"
+#include "include/ColObject.h"
+#include "include/WaterArray.h"
+#include "include/DynamicWorld.h"
+#include "include/ColAndreasDatabaseReader.h"
+#include "include/networking.h"
 
 // SAMP objects only go up 19999
 #define WATER_MESH_ID 20000
 
-std::vector <ColAndreasColObject*> colObjects;
-std::vector <btCompoundShape*> colConvex;
+std::vector<ColAndreasColObject *> colObjects;
+std::vector<btCompoundShape *> colConvex;
 
 ColAndreasColObject::ColAndreasColObject(uint16_t colindex, bool thirdparty = false)
 {
@@ -16,7 +17,7 @@ ColAndreasColObject::ColAndreasColObject(uint16_t colindex, bool thirdparty = fa
 	// Build any spheres
 	for (uint16_t i = 0; i < CollisionModels[colindex].SphereCount; i++)
 	{
-		btSphereShape* sphere = new btSphereShape(CollisionModels[colindex].SphereData[i].Radius);
+		btSphereShape *sphere = new btSphereShape(CollisionModels[colindex].SphereData[i].Radius);
 		colMapObject->addChildShape(btTransform(btQuaternion(0, 0, 0, 1), btVector3(CollisionModels[colindex].SphereData[i].Offset.x, CollisionModels[colindex].SphereData[i].Offset.y, CollisionModels[colindex].SphereData[i].Offset.z)), sphere);
 		spheres.push_back(sphere);
 	}
@@ -24,7 +25,7 @@ ColAndreasColObject::ColAndreasColObject(uint16_t colindex, bool thirdparty = fa
 	for (uint16_t i = 0; i < CollisionModels[colindex].BoxCount; i++)
 	{
 		// Create a box shape
-		btBoxShape* box = new btBoxShape(btVector3(CollisionModels[colindex].BoxData[i].Size.x, CollisionModels[colindex].BoxData[i].Size.y, CollisionModels[colindex].BoxData[i].Size.z));
+		btBoxShape *box = new btBoxShape(btVector3(CollisionModels[colindex].BoxData[i].Size.x, CollisionModels[colindex].BoxData[i].Size.y, CollisionModels[colindex].BoxData[i].Size.z));
 		colMapObject->addChildShape(btTransform(btQuaternion(0, 0, 0, 1), btVector3(CollisionModels[colindex].BoxData[i].Center.x, CollisionModels[colindex].BoxData[i].Center.y, CollisionModels[colindex].BoxData[i].Center.z)), box);
 		boxes.push_back(box);
 	}
@@ -37,15 +38,15 @@ ColAndreasColObject::ColAndreasColObject(uint16_t colindex, bool thirdparty = fa
 		{
 			// Add triangle faces
 			trimesh->addTriangle(btVector3(CollisionModels[colindex].FacesData[i].FaceA.x, CollisionModels[colindex].FacesData[i].FaceA.y, CollisionModels[colindex].FacesData[i].FaceA.z),
-				btVector3(CollisionModels[colindex].FacesData[i].FaceB.x, CollisionModels[colindex].FacesData[i].FaceB.y, CollisionModels[colindex].FacesData[i].FaceB.z),
-				btVector3(CollisionModels[colindex].FacesData[i].FaceC.x, CollisionModels[colindex].FacesData[i].FaceC.y, CollisionModels[colindex].FacesData[i].FaceC.z));
+								 btVector3(CollisionModels[colindex].FacesData[i].FaceB.x, CollisionModels[colindex].FacesData[i].FaceB.y, CollisionModels[colindex].FacesData[i].FaceB.z),
+								 btVector3(CollisionModels[colindex].FacesData[i].FaceC.x, CollisionModels[colindex].FacesData[i].FaceC.y, CollisionModels[colindex].FacesData[i].FaceC.z));
 		}
 		meshshape = new btBvhTriangleMeshShape(trimesh, true);
-		if (thirdparty) //will be true for convex objects
+		if (thirdparty) // will be true for convex objects
 		{
-			btConvexTriangleMeshShape* convexMesh;
+			btConvexTriangleMeshShape *convexMesh;
 			convexMesh = new btConvexTriangleMeshShape(trimesh);
-			colMapObject->addChildShape(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)), convexMesh); //producing a convex mesh
+			colMapObject->addChildShape(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)), convexMesh); // producing a convex mesh
 		}
 		else
 			colMapObject->addChildShape(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)), meshshape);
@@ -53,7 +54,7 @@ ColAndreasColObject::ColAndreasColObject(uint16_t colindex, bool thirdparty = fa
 }
 
 ColAndreasColObject::~ColAndreasColObject()
-{	
+{
 	delete meshshape;
 	delete trimesh;
 	for (uint16_t i = 0; i < boxes.size(); i++)
@@ -67,35 +68,36 @@ ColAndreasColObject::~ColAndreasColObject()
 	delete colMapObject;
 }
 
-
-btCompoundShape* ColAndreasColObject::getCompoundShape()
+btCompoundShape *ColAndreasColObject::getCompoundShape()
 {
 	return colMapObject;
 }
 
-
-bool LoadCollisionData(btDynamicsWorld* collisionWorld)
+bool LoadCollisionData(btDynamicsWorld *collisionWorld, std::string path)
 {
-	if (ReadColandreasDatabaseFile("scriptfiles/colandreas/ColAndreas.cadb"))
+	// old path - "scriptfiles/colandreas/ColAndreas.cadb"
+	if (ReadColandreasDatabaseFile(path))
 	{
+		printf("Total models to load: %d\n", ModelCount);
 		for (uint16_t i = 0; i < ModelCount; i++)
 		{
 			if (i % 100 == 0)
 			{
 				printf("\33Loading: %0.1f\r", ((double)i / ModelCount) * 100);
 			}
-			ColAndreasColObject* colObject = new ColAndreasColObject(i);
-			ColAndreasColObject* convex = new ColAndreasColObject(i, true); //true for convex mesh
+			ColAndreasColObject *colObject = new ColAndreasColObject(i);
+			ColAndreasColObject *convex = new ColAndreasColObject(i, true); // true for convex mesh
 			colObjects.push_back(colObject);
-			colConvex.push_back(convex->getCompoundShape()); //storing convex bodies
+			colConvex.push_back(convex->getCompoundShape()); // storing convex bodies
 		}
+		printf("\n\nDatabase loaded, starting tcp server on port %d\n", PORTNUM);
+
 		return true;
 	}
 	return false;
 }
 
-
-ColAndreasMapObject::ColAndreasMapObject(int32_t modelid, const btQuaternion& objectRot, const btVector3& objectPos, btDynamicsWorld* world)
+ColAndreasMapObject::ColAndreasMapObject(int32_t modelid, const btQuaternion &objectRot, const btVector3 &objectPos, btDynamicsWorld *world)
 {
 	colindex = ModelRef[modelid];
 
@@ -118,7 +120,7 @@ ColAndreasMapObject::ColAndreasMapObject(int32_t modelid, const btQuaternion& ob
 
 	// Add rigid body to world
 	collisionWorld->addRigidBody(colMapRigidBody);
-	
+
 	// Create the tracker object
 	tracker = new ColAndreasObjectTracker();
 
@@ -135,23 +137,21 @@ ColAndreasMapObject::~ColAndreasMapObject()
 	delete colMapObjectPosition;
 }
 
-void ColAndreasMapObject::setMapObjectPosition(btVector3& position)
+void ColAndreasMapObject::setMapObjectPosition(btVector3 &position)
 {
 	colMapRigidBody->setWorldTransform(btTransform(colMapRigidBody->getWorldTransform().getRotation(), position));
 	collisionWorld->removeRigidBody(colMapRigidBody);
 	collisionWorld->addRigidBody(colMapRigidBody);
 }
 
-
-void ColAndreasMapObject::setMapObjectRotation(btQuaternion& rotation)
+void ColAndreasMapObject::setMapObjectRotation(btQuaternion &rotation)
 {
 	colMapRigidBody->setWorldTransform(btTransform(rotation, colMapRigidBody->getWorldTransform().getOrigin()));
 	collisionWorld->removeRigidBody(colMapRigidBody);
 	collisionWorld->addRigidBody(colMapRigidBody);
 }
 
-
-MapWaterMesh::MapWaterMesh(btDynamicsWorld* world)
+MapWaterMesh::MapWaterMesh(btDynamicsWorld *world)
 {
 	collisionWorld = world;
 
@@ -161,8 +161,8 @@ MapWaterMesh::MapWaterMesh(btDynamicsWorld* world)
 	for (uint16_t i = 0; i < 616; i++)
 	{
 		trimesh->addTriangle(btVector3(btScalar(waterData[i][0]), btScalar(waterData[i][1]), btScalar(waterData[i][2])),
-			btVector3(btScalar(waterData[i][3]), btScalar(waterData[i][4]), btScalar(waterData[i][5])),
-			btVector3(btScalar(waterData[i][6]), btScalar(waterData[i][7]), btScalar(waterData[i][8])));
+							 btVector3(btScalar(waterData[i][3]), btScalar(waterData[i][4]), btScalar(waterData[i][5])),
+							 btVector3(btScalar(waterData[i][6]), btScalar(waterData[i][7]), btScalar(waterData[i][8])));
 	}
 
 	meshshape = new btBvhTriangleMeshShape(trimesh, true);
@@ -179,7 +179,6 @@ MapWaterMesh::MapWaterMesh(btDynamicsWorld* world)
 
 	// Add rigid body to world
 	collisionWorld->addRigidBody(meshRigidBody);
-
 }
 
 MapWaterMesh::~MapWaterMesh()
@@ -190,8 +189,6 @@ MapWaterMesh::~MapWaterMesh()
 	delete trimesh;
 }
 
-
-
 ObjectManager::ObjectManager()
 {
 	for (int i = 0; i < MAX_MAP_OBJECTS; i++)
@@ -199,7 +196,7 @@ ObjectManager::ObjectManager()
 		slotUsed[i] = false;
 	}
 }
- 		 
+
 int ObjectManager::setExtraID(const uint16_t index, int type, int data)
 {
 	if (slotUsed[index] && type >= 0 && type < 10)
@@ -219,8 +216,7 @@ int ObjectManager::getExtraID(const uint16_t index, int type)
 	return -1;
 }
 
-
-int ObjectManager::addObjectManager(ColAndreasMapObject* mapObject)
+int ObjectManager::addObjectManager(ColAndreasMapObject *mapObject)
 {
 	for (int i = 0; i < MAX_MAP_OBJECTS; i++)
 	{
@@ -255,7 +251,7 @@ int ObjectManager::validObjectManager(const uint16_t index)
 	return 0;
 }
 
-int ObjectManager::setObjectPosition(const uint16_t index, btVector3& position)
+int ObjectManager::setObjectPosition(const uint16_t index, btVector3 &position)
 {
 	if (slotUsed[index])
 	{
@@ -265,7 +261,7 @@ int ObjectManager::setObjectPosition(const uint16_t index, btVector3& position)
 	return 0;
 }
 
-int ObjectManager::setObjectRotation(const uint16_t index, btQuaternion& rotation)
+int ObjectManager::setObjectRotation(const uint16_t index, btQuaternion &rotation)
 {
 	if (slotUsed[index])
 	{
@@ -275,8 +271,7 @@ int ObjectManager::setObjectRotation(const uint16_t index, btQuaternion& rotatio
 	return 0;
 }
 
-
-int ObjectManager::getBoundingSphere(int32_t modelid, btVector3& center, btScalar& radius)
+int ObjectManager::getBoundingSphere(int32_t modelid, btVector3 &center, btScalar &radius)
 {
 	uint16_t colindex = ModelRef[modelid];
 
@@ -287,7 +282,6 @@ int ObjectManager::getBoundingSphere(int32_t modelid, btVector3& center, btScala
 			colindex = ModelRef[LodReference[modelid]];
 	}
 
-
 	if (colindex != 65535)
 	{
 		colObjects[colindex]->getCompoundShape()->getBoundingSphere(center, radius);
@@ -296,8 +290,7 @@ int ObjectManager::getBoundingSphere(int32_t modelid, btVector3& center, btScala
 	return 0;
 }
 
-
-int ObjectManager::getBoundingBox(int32_t modelid, btVector3& min, btVector3& max)
+int ObjectManager::getBoundingBox(int32_t modelid, btVector3 &min, btVector3 &max)
 {
 	uint16_t colindex = ModelRef[modelid];
 	btTransform t;
@@ -310,7 +303,6 @@ int ObjectManager::getBoundingBox(int32_t modelid, btVector3& min, btVector3& ma
 			colindex = ModelRef[LodReference[modelid]];
 	}
 
-
 	if (colindex != 65535)
 	{
 		colObjects[colindex]->getCompoundShape()->getAabb(t, min, max);
@@ -318,7 +310,6 @@ int ObjectManager::getBoundingBox(int32_t modelid, btVector3& min, btVector3& ma
 	}
 	return 0;
 }
-
 
 RemovedBuildingManager::RemovedBuildingManager()
 {
@@ -331,7 +322,7 @@ bool RemovedBuildingManager::isRemoved(int16_t model, Vector position)
 		if (model == removedBuildings[i].r_Model || model == -1)
 		{
 			btScalar dist = btDistance(btVector3(btScalar(position.x), btScalar(position.y), btScalar(position.z)),
-				btVector3(btScalar(removedBuildings[i].r_X), btScalar(removedBuildings[i].r_Y), btScalar(removedBuildings[i].r_Z)));
+									   btVector3(btScalar(removedBuildings[i].r_X), btScalar(removedBuildings[i].r_Y), btScalar(removedBuildings[i].r_Z)));
 
 			if (dist <= btScalar(removedBuildings[i].r_Radius))
 			{
@@ -351,16 +342,17 @@ void RemovedBuildingManager::restoreBuilding(removeBuildingData targetData)
 			if ((targetData.r_Model == RemovedGameObjects[i]->Modelid || targetData.r_Model == -1))
 			{
 				btScalar dist = btDistance(btVector3(btScalar(targetData.r_X), btScalar(targetData.r_Y), btScalar(targetData.r_Z)),
-					btVector3(btScalar(RemovedGameObjects[i]->Position.x), btScalar(RemovedGameObjects[i]->Position.y), btScalar(RemovedGameObjects[i]->Position.z)));
+										   btVector3(btScalar(RemovedGameObjects[i]->Position.x), btScalar(RemovedGameObjects[i]->Position.y), btScalar(RemovedGameObjects[i]->Position.z)));
 
 				if (dist <= btScalar(targetData.r_Radius))
 				{
 					uint16_t index = ModelRef[RemovedGameObjects[i]->Modelid];
-					if (index == 65535) continue;
+					if (index == 65535)
+						continue;
 
 					collisionWorld->createColAndreasMapObject(0, RemovedGameObjects[i]->Modelid,
-						btQuaternion(RemovedGameObjects[i]->Rotation.x, RemovedGameObjects[i]->Rotation.y, RemovedGameObjects[i]->Rotation.z, RemovedGameObjects[i]->Rotation.w),
-						btVector3(RemovedGameObjects[i]->Position.x, RemovedGameObjects[i]->Position.y, RemovedGameObjects[i]->Position.z));
+															  btQuaternion(RemovedGameObjects[i]->Rotation.x, RemovedGameObjects[i]->Rotation.y, RemovedGameObjects[i]->Rotation.z, RemovedGameObjects[i]->Rotation.w),
+															  btVector3(RemovedGameObjects[i]->Position.x, RemovedGameObjects[i]->Position.y, RemovedGameObjects[i]->Position.z));
 
 					RemovedGameObjects[i] = nullptr;
 				}
@@ -374,13 +366,13 @@ void RemovedBuildingManager::addBuilding(removeBuildingData removeData)
 	removedBuildings.push_back(removeData);
 }
 
-void InitCollisionMap(btDynamicsWorld* collisionWorld, RemovedBuildingManager* removedManager)
+void InitCollisionMap(btDynamicsWorld *collisionWorld, RemovedBuildingManager *removedManager)
 {
 	for (uint16_t i = 0; i < IPLCount; i++)
 	{
 		if (ModelPlacements[i].Modelid > 19999)
 		{
-			logprintf("ERROR::InitCollisionMap::Invalid ModelID::%i", ModelPlacements[i].Modelid);
+			// logprintf("ERROR::InitCollisionMap::Invalid ModelID::%i", ModelPlacements[i].Modelid);
 			continue;
 		}
 
@@ -394,13 +386,14 @@ void InitCollisionMap(btDynamicsWorld* collisionWorld, RemovedBuildingManager* r
 		if (!removedManager->isRemoved(ModelPlacements[i].Modelid, ModelPlacements[i].Position))
 		{
 			// Continue if model has no collision
-			if (index == 65535) continue;
+			if (index == 65535)
+				continue;
 
-			ColAndreasMapObject* tmpObject;
+			ColAndreasMapObject *tmpObject;
 			tmpObject = new ColAndreasMapObject(ModelPlacements[i].Modelid, btQuaternion(ModelPlacements[i].Rotation.x, ModelPlacements[i].Rotation.y, ModelPlacements[i].Rotation.z, ModelPlacements[i].Rotation.w), btVector3(ModelPlacements[i].Position.x, ModelPlacements[i].Position.y, ModelPlacements[i].Position.z), collisionWorld);
-
 		}
-		else {
+		else
+		{
 			RemovedGameObjects.push_back(new ItemPlacementstructure(ModelPlacements[i]));
 		}
 	}
