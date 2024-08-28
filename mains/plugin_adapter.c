@@ -1,33 +1,19 @@
 #include "../src/include/networking.h"
-#include "../src/include/lua_bindings.h"
 // #include "../src/include/DynamicWorld.h"
 // #include "../src/include/renderware.h"
 #include "interface.h"
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <lua5.1/lualib.h>
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+
 // ca = require("calua")
 
 int open_socket;
 struct sockaddr_in servaddr;
 char buffer[BUFFER_SIZE] = {0};
-
-static const luaL_Reg calua_lib[] = {
-    //{"Init", lua_Init},
-    {"connect", lua_connect},
-    {"raycast_line", lua_raycast_line},
-    {"exit", lua_exit},
-    //{"RemoveBuilding", lua_RemoveBuilding},
-    {NULL, NULL}
-
-};
-
-__declspec(dllexport) int luaopen_calua_lib(lua_State *L)
-{
-    // luaL_newlib(L, calua_lib);
-    luaL_register(L, "calua_lib", calua_lib);
-    return 1;
-}
 
 __declspec(dllexport) int lua_connect(lua_State *L)
 {
@@ -68,6 +54,7 @@ __declspec(dllexport) int lua_raycast_line(lua_State *L)
     binn_map_set_float(scratch_map, VECTOR_X, lua_tonumber(L, 1) + 0.00001);
     binn_map_set_float(scratch_map, VECTOR_Y, lua_tonumber(L, 2) + 0.00001);
     binn_map_set_float(scratch_map, VECTOR_Z, lua_tonumber(L, 3) + 0.00001);
+
     binn_map_set_float(scratch_map, VECTOR_X + VECTOR_OFFSET, lua_tonumber(L, 4) + 0.00001);
     binn_map_set_float(scratch_map, VECTOR_Y + VECTOR_OFFSET, lua_tonumber(L, 5) + 0.00001);
     binn_map_set_float(scratch_map, VECTOR_Z + VECTOR_OFFSET, lua_tonumber(L, 6) + 0.00001);
@@ -81,7 +68,6 @@ __declspec(dllexport) int lua_raycast_line(lua_State *L)
     (void)recv(open_socket, buffer, sizeof(buffer), 0);
 
     int ret = binn_map_int32(buffer, RETURN);
-
     lua_pushnumber(L, ret);
 
     if (ret == 1)
@@ -89,10 +75,80 @@ __declspec(dllexport) int lua_raycast_line(lua_State *L)
         lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_X));
         lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Y));
         lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Z));
-        lua_pushnumber(L, (double)binn_map_int32(buffer, MODEL));
+
+        lua_pushnumber(L, (double)binn_map_int32(buffer, MODEL_ID));
         return 5;
     }
 
+    return 1;
+}
+
+__declspec(dllexport) int lua_raycast_line_extra(lua_State *L)
+{
+    int32_t Model = 0;
+    unsigned long length_out;
+
+    binn *scratch_map = binn_map();
+
+    binn_map_set_int8(scratch_map, CMD_TYPE, CMD_RAYCAST_EXTRA);
+
+    binn_map_set_float(scratch_map, VECTOR_X, lua_tonumber(L, 1) + 0.00001);
+    binn_map_set_float(scratch_map, VECTOR_Y, lua_tonumber(L, 2) + 0.00001);
+    binn_map_set_float(scratch_map, VECTOR_Z, lua_tonumber(L, 3) + 0.00001);
+
+    binn_map_set_float(scratch_map, VECTOR_X + VECTOR_OFFSET, lua_tonumber(L, 4) + 0.00001);
+    binn_map_set_float(scratch_map, VECTOR_Y + VECTOR_OFFSET, lua_tonumber(L, 5) + 0.00001);
+    binn_map_set_float(scratch_map, VECTOR_Z + VECTOR_OFFSET, lua_tonumber(L, 6) + 0.00001);
+
+    send(open_socket, (char *)binn_ptr(scratch_map), binn_size(scratch_map), 0);
+
+    binn_free(scratch_map);
+
+    memset(buffer, 0, sizeof(buffer));
+
+    (void)recv(open_socket, buffer, sizeof(buffer), 0);
+
+    int ret = binn_map_int32(buffer, RETURN);
+    lua_pushnumber(L, ret);
+
+    if (ret == 1)
+    {
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_X)); // result collision point
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Y));
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Z));
+
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_X + VECTOR_OFFSET)); // it says vector, but its a quaternion for rotation of a model that was hit
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Y + VECTOR_OFFSET));
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Z + VECTOR_OFFSET));
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_W + VECTOR_OFFSET));
+
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_X + VECTOR_OFFSET * 2)); // position of the model that was hit
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Y + VECTOR_OFFSET * 2));
+        lua_pushnumber(L, (double)binn_map_float(buffer, VECTOR_Z + VECTOR_OFFSET * 2));
+
+        lua_pushnumber(L, (double)binn_map_int32(buffer, MODEL_ID));
+
+        return 12;
+    }
+
+    return 1;
+}
+
+static const luaL_Reg calua_lib[] = {
+    //{"Init", lua_Init},
+    {"connect", lua_connect},
+    {"raycast_line", lua_raycast_line},
+    {"raycast_line_extra", lua_raycast_line_extra},
+    {"exit", lua_exit},
+    //{"RemoveBuilding", lua_RemoveBuilding},
+    {NULL, NULL}
+
+};
+
+__declspec(dllexport) int luaopen_calua_lib(lua_State *L)
+{
+    // luaL_newlib(L, calua_lib);
+    luaL_register(L, "calua_lib", calua_lib);
     return 1;
 }
 

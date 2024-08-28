@@ -4,7 +4,7 @@ local ca = package.loadlib("calua.dll", "luaopen_calua_lib")
 ca = ca()
 
 local time_start = os.clock()
-local ret, x, y, z, w
+local ret, x, y, z, rot_x, rot_y, rot_z, rot_w, orig_x, orig_y, orig_z, model_id
 
 ca.connect()
 
@@ -13,14 +13,17 @@ ca.connect()
 
 print(ca.raycast_line(2833, 1290, 12, 2833, 1290, 8))
 
-local tests = 100
+math.randomseed(os.time())
+
+local tests = 200
 for i = 1, tests do
-    ret, x, y, z, w = ca.raycast_line(
+    ret, x, y, z, rot_x, rot_y, rot_z, rot_w, orig_x, orig_y, orig_z, model_id = ca.raycast_line_extra(
         math.random(-3000, 3000), math.random(-3000, 3000), math.random(-30, 60),
         math.random(-3000, 3000), math.random(-3000, 3000), math.random(-30, 60)
     )
-    if (ret == 1) then
-        print(ret, x, y, z, w)
+    if ret == 1 then
+        print("hit pos: [", x, y, z, "] rotation quanterion: [", rot_x, rot_y, rot_z, rot_w, "] model origin: [", orig_x,
+            orig_y, orig_z, "] model id: ", model_id)
     end
 end
 

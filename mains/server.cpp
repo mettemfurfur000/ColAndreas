@@ -56,11 +56,14 @@ unsigned long client_handler(void *param)
     byte type = -1;
     btVector3 Start;
     btVector3 End;
+    btVector3 Result;
+    btVector3 Position;
+
+    btQuaternion Rotation;
+
     float angle;
     float distance;
-
-    btVector3 Result;
-    int32_t Model = 0;
+    int32_t model_id = 0;
 
     bool do_loop = true;
 
@@ -82,21 +85,49 @@ unsigned long client_handler(void *param)
             Start.setY(binn_map_float(input, VECTOR_Y));
             Start.setZ(binn_map_float(input, VECTOR_Z));
 
-            // printf("Start: %f, %f, %f\n", Start.getX(), Start.getY(), Start.getZ());
+            End.setX(binn_map_float(input, VECTOR_X + VECTOR_OFFSET));
+            End.setY(binn_map_float(input, VECTOR_Y + VECTOR_OFFSET));
+            End.setZ(binn_map_float(input, VECTOR_Z + VECTOR_OFFSET));
+
+            if (collisionWorld->performRayTest(Start, End, Result, model_id))
+            {
+                binn_map_set_float(out_map, VECTOR_X, Result.getX());
+                binn_map_set_float(out_map, VECTOR_Y, Result.getY());
+                binn_map_set_float(out_map, VECTOR_Z, Result.getZ());
+
+                binn_map_set_int32(out_map, MODEL_ID, model_id);
+                binn_map_set_int32(out_map, RETURN, 1);
+            }
+            else
+            {
+                binn_map_set_int32(out_map, RETURN, 0);
+            }
+            break;
+        case CMD_RAYCAST_EXTRA:
+            Start.setX(binn_map_float(input, VECTOR_X));
+            Start.setY(binn_map_float(input, VECTOR_Y));
+            Start.setZ(binn_map_float(input, VECTOR_Z));
 
             End.setX(binn_map_float(input, VECTOR_X + VECTOR_OFFSET));
             End.setY(binn_map_float(input, VECTOR_Y + VECTOR_OFFSET));
             End.setZ(binn_map_float(input, VECTOR_Z + VECTOR_OFFSET));
 
-            // printf("End: %f, %f, %f\n", End.getX(), End.getY(), End.getZ());
-            if (collisionWorld->performRayTest(Start, End, Result, Model))
+            if (collisionWorld->performRayTestEx(Start, End, Result, Rotation, Position, model_id))
             {
-                // printf("Hit: %f, %f, %f\n", Result.getX(), Result.getY(), Result.getZ());
-                // printf("Model: %d\n", Model);
                 binn_map_set_float(out_map, VECTOR_X, Result.getX());
                 binn_map_set_float(out_map, VECTOR_Y, Result.getY());
                 binn_map_set_float(out_map, VECTOR_Z, Result.getZ());
-                binn_map_set_int32(out_map, MODEL, Model);
+
+                binn_map_set_float(out_map, VECTOR_X + VECTOR_OFFSET, Rotation.getX());
+                binn_map_set_float(out_map, VECTOR_Y + VECTOR_OFFSET, Rotation.getY());
+                binn_map_set_float(out_map, VECTOR_Z + VECTOR_OFFSET, Rotation.getZ());
+                binn_map_set_float(out_map, VECTOR_W + VECTOR_OFFSET, Rotation.getW());
+
+                binn_map_set_float(out_map, VECTOR_X + VECTOR_OFFSET * 2, Position.getX());
+                binn_map_set_float(out_map, VECTOR_Y + VECTOR_OFFSET * 2, Position.getY());
+                binn_map_set_float(out_map, VECTOR_Z + VECTOR_OFFSET * 2, Position.getZ());
+
+                binn_map_set_int32(out_map, MODEL_ID, model_id);
                 binn_map_set_int32(out_map, RETURN, 1);
             }
             else
