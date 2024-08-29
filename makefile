@@ -10,9 +10,9 @@ CFLAGS += -IC:/msys64/mingw64/include/bullet
 
 LDFLAGS32 += -LC:/msys64/mingw32/lib -lmingw32 -lws2_32 -llua5.1
 LDFLAGS32 += -lm
-LDFLAGS32 += -Lwin32/ -lbinn-3.0 # binn stuff for 32 bit lib
+LDFLAGS32 += -Lbinn-3.0/win32/ -lbinn-3.0 # binn stuff for 32 bit lib
 
-LDFLAGS += -Lx64/ -lbinn-3.0 # binn stuff
+LDFLAGS += -Lbinn-3.0/x64/ -lbinn-3.0 # binn stuff
 
 LDFLAGS += -LC:/msys64/mingw64/lib -lmingw32 -lws2_32 -llua5.1
 
