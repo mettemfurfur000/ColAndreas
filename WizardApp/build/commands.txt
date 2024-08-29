@@ -1,4 +1,0 @@
-b BuildManager.cpp:775
-b BuildManager.cpp:732
-lay src
-r "C:\Users\mttffr\AppData\Local\Programs\Arizona Games Launcher\bin\arizona" world.cadb

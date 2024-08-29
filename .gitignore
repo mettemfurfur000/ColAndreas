@@ -1,9 +1,5 @@
 build/*
 .vscode/*
 obj/*
-
-# wizard folders too
 WizardApp/build/*
-WizardApp/.vscode/*
 WizardApp/obj/*
-
