@@ -73,8 +73,6 @@ wizard: $(OBJPATH)/wizard.o $(objects)
 	g++ $(CFLAGS) -o $(REGULAROUTPATH)/$(WIZARDFILE) $(OBJPATH)/wizard.o $(objects) $(LDFLAGS) -static-libstdc++ -static-libgcc
 	-./grab_dlls.sh $(REGULAROUTPATH)/$(WIZARDFILE) /mingw64/bin 1
 	cp default.cfg $(REGULAROUTPATH)/
-	cp commands.txt $(REGULAROUTPATH)/
-	cp arizona.sh $(REGULAROUTPATH)/
 
 .PHONY: clean
 clean:
